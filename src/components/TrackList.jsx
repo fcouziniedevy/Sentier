@@ -1,11 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
-import { getAllTracks, saveTrack, deleteTrack, renameTrack, getTrack, updateTrackGpx } from '../utils/db';
+import { getAllTracks, saveTrack, deleteTrack, renameTrack, getTrack, updateTrackGpx, markTrackCached, clearTrackCache } from '../utils/db';
 import { parseGpx, reverseTrack } from '../utils/gpxUtils';
+import { computeTilesForTrack, downloadTiles, deleteTiles } from '../utils/tileCache';
+
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function TrackList({ onOpen }) {
   const [tracks, setTracks] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
+  const [downloading, setDownloading] = useState(null); // { id, done, total }
   const fileRef = useRef();
 
   const refresh = () => getAllTracks().then(setTracks);
@@ -70,10 +78,33 @@ export default function TrackList({ onOpen }) {
     });
   };
 
+  const handleDownload = (id) => {
+    getTrack(id).then((record) => {
+      const parsed = parseGpx(record.gpxText);
+      const tiles = computeTilesForTrack(parsed.points);
+      const tileKeys = tiles.map(({ z, x, y }) => `${z}/${x}/${y}`);
+      setDownloading({ id, done: 0, total: tiles.length });
+      downloadTiles(tiles, (done, total) => {
+        setDownloading({ id, done, total });
+      }).then((cacheSize) => {
+        setDownloading(null);
+        return markTrackCached(id, { tileKeys, cacheSize });
+      }).then(refresh);
+    });
+  };
+
+  const handleClearCache = (id) => {
+    getTrack(id).then((record) => {
+      if (record.tileKeys?.length) {
+        return deleteTiles(record.tileKeys);
+      }
+    }).then(() => clearTrackCache(id)).then(refresh);
+  };
+
   const handleOpen = (id) => {
     getTrack(id).then((record) => {
       const parsed = parseGpx(record.gpxText);
-      onOpen({ ...parsed, name: record.name });
+      onOpen({ ...parsed, name: record.name }, id);
     });
   };
 
@@ -109,6 +140,9 @@ export default function TrackList({ onOpen }) {
               )}
               <span className="track-item-stats">
                 {(t.totalDistance / 1000).toFixed(1)} km — D+ {Math.round(t.elevationGain)} m
+                {t.cachedOffline && t.cacheSize > 0 && (
+                  <> — Cache: {formatSize(t.cacheSize)}</>
+                )}
               </span>
             </div>
             <div className="track-item-actions" onClick={(e) => e.stopPropagation()}>
@@ -121,6 +155,18 @@ export default function TrackList({ onOpen }) {
                 <>
                   <button className="action-btn" onClick={() => { setEditingId(t.id); setEditName(t.name); }}>Rename</button>
                   <button className="action-btn" onClick={() => handleReverse(t.id)}>Reverse</button>
+                  <button
+                    className={`action-btn${t.cachedOffline ? ' action-btn-cached' : ''}`}
+                    onClick={() => handleDownload(t.id)}
+                    disabled={downloading != null}
+                  >
+                    {downloading?.id === t.id
+                      ? `${downloading.done}/${downloading.total}`
+                      : 'Offline'}
+                  </button>
+                  {t.cachedOffline && (
+                    <button className="action-btn action-btn-danger" onClick={() => handleClearCache(t.id)}>Clear cache</button>
+                  )}
                   <button className="action-btn action-btn-danger" onClick={() => handleDelete(t.id)}>Delete</button>
                 </>
               )}

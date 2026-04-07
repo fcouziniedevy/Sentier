@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import TrackList from './components/TrackList';
 import MapView from './components/MapView';
 import ElevationChart from './components/ElevationChart';
-import { getLastTrack } from './utils/db';
+import { getTrack } from './utils/db';
 import { parseGpx } from './utils/gpxUtils';
 import './App.css';
 
@@ -15,7 +15,9 @@ export default function App() {
   const [showChart, setShowChart] = useState(false);
 
   useEffect(() => {
-    getLastTrack().then((record) => {
+    const lastId = localStorage.getItem('lastTrackId');
+    if (!lastId) { setLoading(false); return; }
+    getTrack(Number(lastId)).then((record) => {
       if (record) {
         try {
           const parsed = parseGpx(record.gpxText);
@@ -23,15 +25,20 @@ export default function App() {
         } catch { /* ignore parse errors */ }
       }
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
-  const handleOpen = useCallback((parsed) => {
+  const handleOpen = useCallback((parsed, trackId) => {
     setTrack(parsed);
     setHighlightIndex(null);
     setCenterIndex(null);
     setShowChart(false);
     setPage('map');
+    if (trackId != null) {
+      localStorage.setItem('lastTrackId', trackId);
+      // Clear saved map view so the new track gets fitted
+      localStorage.removeItem('mapView');
+    }
   }, []);
 
   const handleChartClick = useCallback((index) => {

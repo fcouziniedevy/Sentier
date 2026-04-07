@@ -11,7 +11,9 @@ import {
   ScaleControl,
   useMap,
 } from 'react-leaflet';
+import { createTileLayerComponent } from '@react-leaflet/core';
 import 'leaflet/dist/leaflet.css';
+import { getCachedTile, tileUrl } from '../utils/tileCache';
 
 const IGN_SCAN25_URL =
   'https://data.geopf.fr/private/wmts?' +
@@ -20,6 +22,40 @@ const IGN_SCAN25_URL =
   '&STYLE=normal&FORMAT=image/jpeg' +
   '&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}' +
   '&apikey=ign_scan_ws';
+
+// Custom Leaflet TileLayer that checks IndexedDB cache first
+const CachedTileLayer = L.TileLayer.extend({
+  createTile(coords, done) {
+    const tile = document.createElement('img');
+    tile.alt = '';
+    tile.setAttribute('role', 'presentation');
+
+    const { x, y } = coords;
+    const z = coords.z;
+
+    getCachedTile(z, x, y)
+      .then((blob) => {
+        if (blob) {
+          tile.src = URL.createObjectURL(blob);
+          done(null, tile);
+        } else {
+          // Fall back to network
+          tile.crossOrigin = 'anonymous';
+          tile.src = tileUrl(z, x, y);
+          tile.onload = () => done(null, tile);
+          tile.onerror = (err) => done(err, tile);
+        }
+      })
+      .catch(() => {
+        tile.crossOrigin = 'anonymous';
+        tile.src = tileUrl(z, x, y);
+        tile.onload = () => done(null, tile);
+        tile.onerror = (err) => done(err, tile);
+      });
+
+    return tile;
+  },
+});
 
 const OPEN_TOPO_URL = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
 
@@ -32,18 +68,51 @@ const IGN_PLAN_URL =
 
 const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-function FitBounds({ points }) {
+function FitBounds({ points, skipInitial }) {
   const map = useMap();
+  const prevPointsRef = useRef(points);
   useEffect(() => {
     if (points.length === 0) return;
+    // Skip if these are the same points we mounted with and we have a saved view
+    if (points === prevPointsRef.current && skipInitial) return;
+    prevPointsRef.current = points;
     const lats = points.map((p) => p.lat);
     const lons = points.map((p) => p.lon);
     map.fitBounds([
       [Math.min(...lats), Math.min(...lons)],
       [Math.max(...lats), Math.max(...lons)],
     ], { padding: [30, 30] });
-  }, [points, map]);
+  }, [points, map, skipInitial]);
   return null;
+}
+
+const CachedIGNTileLayer = createTileLayerComponent(
+  function createCachedLayer(props, context) {
+    const layer = new CachedTileLayer('', { ...props });
+    return { instance: layer, context: { ...context, layerContainer: layer } };
+  },
+  function updateCachedLayer(layer, props, prevProps) {}
+);
+
+function SaveMapView() {
+  const map = useMap();
+  useEffect(() => {
+    const handler = () => {
+      const { lat, lng } = map.getCenter();
+      localStorage.setItem('mapView', JSON.stringify({ lat, lng, zoom: map.getZoom() }));
+    };
+    map.on('moveend', handler);
+    return () => map.off('moveend', handler);
+  }, [map]);
+  return null;
+}
+
+function getInitialView() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('mapView'));
+    if (saved) return { center: [saved.lat, saved.lng], zoom: saved.zoom };
+  } catch {}
+  return { center: [46.5, 2.5], zoom: 6 };
 }
 
 function CenterOnPoint({ points, centerIndex }) {
@@ -174,18 +243,21 @@ export default function MapView({ points, highlightIndex, onTrackClick, centerIn
   }, [points]);
 
   const highlightPoint = highlightIndex != null ? points[highlightIndex] : null;
+  const initialView = useMemo(() => getInitialView(), []);
+  const hasSavedView = useMemo(() => !!localStorage.getItem('mapView'), []);
 
   return (
     <MapContainer
-      center={[46.5, 2.5]}
-      zoom={6}
+      center={initialView.center}
+      zoom={initialView.zoom}
       style={{ height: '100%', width: '100%' }}
     >
+      <SaveMapView />
       <LocateUser />
       <ScaleControl position="bottomleft" metric imperial={false} />
       <LayersControl position="topright">
         <LayersControl.BaseLayer checked name="IGN Topo (Scan25)">
-          <TileLayer url={IGN_SCAN25_URL} attribution="&copy; IGN" maxZoom={18} crossOrigin="anonymous" />
+          <CachedIGNTileLayer attribution="&copy; IGN" maxZoom={18} />
         </LayersControl.BaseLayer>
         <LayersControl.BaseLayer name="OpenTopoMap">
           <TileLayer url={OPEN_TOPO_URL} attribution="&copy; OpenTopoMap contributors" maxZoom={17} crossOrigin="anonymous" />
@@ -200,7 +272,7 @@ export default function MapView({ points, highlightIndex, onTrackClick, centerIn
 
       {positions.length > 0 && (
         <>
-          <FitBounds points={points} />
+          <FitBounds points={points} skipInitial={hasSavedView} />
           <Polyline positions={positions} color="#f97316" weight={4} />
           <CircleMarker
             center={[points[0].lat, points[0].lon]}

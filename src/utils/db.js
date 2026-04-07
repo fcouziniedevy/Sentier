@@ -81,6 +81,26 @@ export function renameTrack(id, newName) {
   });
 }
 
+export function markTrackCached(id, { tileKeys = [], cacheSize = 0 } = {}) {
+  return getTrack(id).then((track) => {
+    if (!track) return;
+    track.cachedOffline = true;
+    track.tileKeys = tileKeys;
+    track.cacheSize = cacheSize;
+    return tx('readwrite', (store) => store.put(track));
+  });
+}
+
+export function clearTrackCache(id) {
+  return getTrack(id).then((track) => {
+    if (!track) return;
+    track.cachedOffline = false;
+    track.tileKeys = [];
+    track.cacheSize = 0;
+    return tx('readwrite', (store) => store.put(track));
+  });
+}
+
 export function updateTrackGpx(id, gpxText, { name, totalDistance, elevationGain }) {
   return getTrack(id).then((track) => {
     if (!track) return;
