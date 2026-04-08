@@ -149,13 +149,6 @@ export default function ElevationChart({ points, highlightIndex, onHover, onClic
 
   const containerRef = useRef(null);
 
-  // Prevent touch gestures from scrolling/zooming the page when interacting with the chart
-  useMemo(() => {
-    const handler = (e) => e.preventDefault();
-    // Attach after mount via ref callback
-    return handler;
-  }, []);
-
   const setContainerRef = useCallback((node) => {
     if (containerRef.current) {
       containerRef.current.removeEventListener('touchstart', containerRef._handler);

@@ -21,19 +21,18 @@ function tx(mode, fn) {
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, mode);
       const store = transaction.objectStore(STORE_NAME);
-      const result = fn(store);
-      transaction.oncomplete = () => resolve(result._result);
+      const req = fn(store);
+      let result;
+      req.onsuccess = () => { result = req.result; };
+      transaction.oncomplete = () => resolve(result);
       transaction.onerror = () => reject(transaction.error);
-      if (result.onsuccess) {
-        result.onsuccess = () => { result._result = result.result; };
-      }
     });
   });
 }
 
-export function saveTrack({ name, gpxText, totalDistance, elevationGain }) {
+export function saveTrack({ name, gpxText, totalDistance, elevationGain, elevationLoss }) {
   return tx('readwrite', (store) =>
-    store.add({ name, gpxText, totalDistance, elevationGain, savedAt: Date.now() })
+    store.add({ name, gpxText, totalDistance, elevationGain, elevationLoss, savedAt: Date.now() })
   );
 }
 
@@ -81,6 +80,14 @@ export function renameTrack(id, newName) {
   });
 }
 
+export function markElevationEnriched(id) {
+  return getTrack(id).then((track) => {
+    if (!track) return;
+    track.elevationEnriched = true;
+    return tx('readwrite', (store) => store.put(track));
+  });
+}
+
 export function markTrackCached(id, { tileKeys = [], cacheSize = 0 } = {}) {
   return getTrack(id).then((track) => {
     if (!track) return;
@@ -101,13 +108,14 @@ export function clearTrackCache(id) {
   });
 }
 
-export function updateTrackGpx(id, gpxText, { name, totalDistance, elevationGain }) {
+export function updateTrackGpx(id, gpxText, { name, totalDistance, elevationGain, elevationLoss }) {
   return getTrack(id).then((track) => {
     if (!track) return;
     track.gpxText = gpxText;
     track.name = name;
     track.totalDistance = totalDistance;
     track.elevationGain = elevationGain;
+    track.elevationLoss = elevationLoss;
     return tx('readwrite', (store) => store.put(track));
   });
 }

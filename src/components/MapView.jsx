@@ -5,7 +5,7 @@ import {
   TileLayer,
   Polyline,
   CircleMarker,
-  Circle,
+  Marker,
   Tooltip,
   LayersControl,
   ScaleControl,
@@ -152,10 +152,10 @@ function TrackClickHandler({ points, onTrackClick }) {
   return null;
 }
 
-function LocateUser() {
+function LocateUser({ locateTrigger }) {
   const map = useMap();
   const [position, setPosition] = useState(null);
-  const [accuracy, setAccuracy] = useState(0);
+  const [heading, setHeading] = useState(null);
   const posRef = useRef(null);
 
   useEffect(() => {
@@ -164,8 +164,9 @@ function LocateUser() {
     const onSuccess = (pos) => {
       const latlng = [pos.coords.latitude, pos.coords.longitude];
       setPosition(latlng);
-      setAccuracy(pos.coords.accuracy);
       posRef.current = latlng;
+      const h = pos.coords.heading;
+      setHeading(h != null && !isNaN(h) ? h : null);
     };
 
     // Get an initial fix first (faster on some mobile browsers)
@@ -180,34 +181,26 @@ function LocateUser() {
   }, []);
 
   useEffect(() => {
-    const LocateControl = L.Control.extend({
-      onAdd() {
-        const btn = L.DomUtil.create('button', 'locate-btn');
-        btn.innerHTML = '\u2316';
-        btn.title = 'Center on my location';
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          if (posRef.current) map.setView(posRef.current, 15);
-        };
-        L.DomEvent.disableClickPropagation(btn);
-        return btn;
-      },
-    });
+    if (!locateTrigger) return;
+    if (posRef.current) map.setView(posRef.current, 15);
+  }, [locateTrigger, map]);
 
-    const control = new LocateControl({ position: 'topleft' });
-    control.addTo(map);
-    return () => control.remove();
-  }, [map]);
+  const arrowIcon = useMemo(() => heading != null ? L.divIcon({
+    className: '',
+    html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="transform:rotate(${heading}deg);display:block">
+      <polygon points="12,2 19,20 12,15 5,20" fill="#3b82f6" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  }) : null, [heading]);
 
   if (!position) return null;
 
   return (
     <>
-      <Circle
-        center={position}
-        radius={accuracy}
-        pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1, weight: 1 }}
-      />
+      {arrowIcon && (
+        <Marker position={position} icon={arrowIcon} interactive={false} zIndexOffset={10} />
+      )}
       <CircleMarker
         center={position}
         radius={7}
@@ -219,7 +212,7 @@ function LocateUser() {
   );
 }
 
-export default function MapView({ points, highlightIndex, onTrackClick, centerIndex }) {
+export default function MapView({ points, highlightIndex, onTrackClick, centerIndex, color = '#f97316', locateTrigger }) {
   const positions = useMemo(
     () => points.map((p) => [p.lat, p.lon]),
     [points]
@@ -244,16 +237,17 @@ export default function MapView({ points, highlightIndex, onTrackClick, centerIn
 
   const highlightPoint = highlightIndex != null ? points[highlightIndex] : null;
   const initialView = useMemo(() => getInitialView(), []);
-  const hasSavedView = useMemo(() => !!localStorage.getItem('mapView'), []);
+  const hasSavedView = !!localStorage.getItem('mapView');
 
   return (
     <MapContainer
       center={initialView.center}
       zoom={initialView.zoom}
+      zoomControl={false}
       style={{ height: '100%', width: '100%' }}
     >
       <SaveMapView />
-      <LocateUser />
+      <LocateUser locateTrigger={locateTrigger} />
       <ScaleControl position="bottomleft" metric imperial={false} />
       <LayersControl position="topright">
         <LayersControl.BaseLayer checked name="IGN Topo (Scan25)">
@@ -273,7 +267,7 @@ export default function MapView({ points, highlightIndex, onTrackClick, centerIn
       {positions.length > 0 && (
         <>
           <FitBounds points={points} skipInitial={hasSavedView} />
-          <Polyline positions={positions} color="#f97316" weight={4} />
+          <Polyline positions={positions} color={color} weight={4} />
           <CircleMarker
             center={[points[0].lat, points[0].lon]}
             radius={7}

@@ -93,6 +93,26 @@ export async function getCachedTile(z, x, y) {
   });
 }
 
+// Bulk existence check — single transaction, no blob fetch
+async function checkCachedKeys(keys) {
+  if (!keys.length) return new Set();
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const cached = new Set();
+    let pending = keys.length;
+    keys.forEach((key) => {
+      const req = store.getKey(key);
+      req.onsuccess = () => {
+        if (req.result !== undefined) cached.add(key);
+        if (--pending === 0) resolve(cached);
+      };
+      req.onerror = () => { if (--pending === 0) resolve(cached); };
+    });
+  });
+}
+
 async function storeTile(key, blob) {
   const db = await openDb();
   return new Promise((resolve, reject) => {
@@ -105,33 +125,31 @@ async function storeTile(key, blob) {
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function downloadTiles(tiles, onProgress, { concurrency = 4, delayMs = 500 } = {}) {
-  let done = 0;
-  let totalBytes = 0;
+// IGN Géoplateforme rate limit: 10 req/s. Default target: 8 req/s (20% headroom).
+export async function downloadTiles(tiles, onProgress, { concurrency = 4, maxRatePerSec = 8 } = {}) {
   const total = tiles.length;
-  onProgress(0, total);
+  const allKeys = tiles.map(({ z, x, y }) => `${z}/${x}/${y}`);
 
-  // Process in batches with a delay between each batch to avoid flooding the server
+  // Skip tiles already in cache (single bulk check before the loop)
+  const alreadyCached = await checkCachedKeys(allKeys);
+  const toDownload = tiles.filter(({ z, x, y }) => !alreadyCached.has(`${z}/${x}/${y}`));
+
+  let done = alreadyCached.size;
+  onProgress(done, total);
+
+  const minBatchMs = (concurrency / maxRatePerSec) * 1000;
+
   let i = 0;
-  while (i < tiles.length) {
-    const batch = tiles.slice(i, i + concurrency);
+  while (i < toDownload.length) {
+    const batch = toDownload.slice(i, i + concurrency);
+    const batchStart = Date.now();
     await Promise.all(
       batch.map(async ({ z, x, y }) => {
-        const key = `${z}/${x}/${y}`;
-        // Skip if already cached
-        const existing = await getCachedTile(z, x, y);
-        if (existing) {
-          totalBytes += existing.size;
-          done++;
-          onProgress(done, total);
-          return;
-        }
         try {
           const resp = await fetch(tileUrl(z, x, y));
           if (resp.ok) {
             const blob = await resp.blob();
-            totalBytes += blob.size;
-            await storeTile(key, blob);
+            await storeTile(`${z}/${x}/${y}`, blob);
           }
         } catch {
           // Skip failed tiles silently
@@ -141,25 +159,32 @@ export async function downloadTiles(tiles, onProgress, { concurrency = 4, delayM
       })
     );
     i += concurrency;
-    if (i < tiles.length) await delay(delayMs);
+    if (i < toDownload.length) {
+      const remaining = minBatchMs - (Date.now() - batchStart);
+      if (remaining > 0) await delay(remaining);
+    }
   }
 
-  return totalBytes;
+  return getCacheSizeForKeys(allKeys);
 }
 
 export async function getCacheSizeForKeys(keys) {
+  if (!keys.length) return 0;
   const db = await openDb();
-  let totalSize = 0;
-  for (const key of keys) {
-    const blob = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const req = tx.objectStore(STORE_NAME).get(key);
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => reject(req.error);
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    let totalSize = 0;
+    let pending = keys.length;
+    keys.forEach((key) => {
+      const req = store.get(key);
+      req.onsuccess = () => {
+        if (req.result) totalSize += req.result.size;
+        if (--pending === 0) resolve(totalSize);
+      };
+      req.onerror = () => { if (--pending === 0) resolve(totalSize); };
     });
-    if (blob) totalSize += blob.size;
-  }
-  return totalSize;
+  });
 }
 
 export async function deleteTiles(keys) {

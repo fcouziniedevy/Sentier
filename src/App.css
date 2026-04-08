@@ -69,6 +69,76 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  position: relative;
+}
+
+.map-bottom-bar {
+  display: none;
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  justify-content: space-around;
+  padding: 0 40px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.map-bar-btn {
+  pointer-events: all;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.map-bar-btn:active {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.map-bar-btn-disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Transparent Leaflet layers control */
+.leaflet-control-layers-toggle {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  width: 48px !important;
+  height: 48px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='12 2 2 7 12 12 22 7 12 2'/%3E%3Cpolyline points='2 12 12 17 22 12'/%3E%3Cpolyline points='2 17 12 22 22 17'/%3E%3C/svg%3E") !important;
+  background-size: 22px 22px !important;
+}
+
+.leaflet-control-layers {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.leaflet-control-layers-expanded {
+  background: rgba(30, 41, 59, 0.85) !important;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  color: white !important;
+}
+
+.leaflet-control-layers-expanded label {
+  color: white;
 }
 
 .chart-container {
@@ -96,6 +166,68 @@
 
 .header-btn:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.header-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: transparent;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.header-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.tab-btn:hover {
+  color: #1e293b;
+}
+
+.tab-btn-active {
+  color: #1e293b;
+  font-weight: 600;
+  border-bottom-color: #863bff;
+}
+
+/* Settings page */
+.settings-page {
+  padding: 24px 16px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.settings-row label {
+  flex: 1;
+  font-weight: 500;
 }
 
 /* Track list page */
@@ -202,6 +334,57 @@
   background: #fecaca;
 }
 
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: #cbd5e1;
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.icon-btn-active {
+  color: white;
+  background: #2563eb;
+  border-color: #1d4ed8;
+}
+
+.icon-btn-active:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.icon-btn-danger {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.icon-btn-danger:hover:not(:disabled) {
+  background: #fecaca;
+}
+
+.icon-btn-progress {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .rename-input {
   width: 100%;
   padding: 4px 8px;
@@ -228,23 +411,16 @@
   background: #e2e8f0;
 }
 
-.locate-btn {
-  width: 34px;
-  height: 34px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 2px solid rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  font-size: 20px;
-  line-height: 30px;
-  cursor: pointer;
-  color: #333;
-}
-
-.locate-btn:hover {
-  background: rgba(255, 255, 255, 1);
-}
 
 @media (max-width: 600px) {
+  .map-header {
+    display: none;
+  }
+
+  .map-bottom-bar {
+    display: flex;
+  }
+
   .header {
     padding: 6px 10px;
   }

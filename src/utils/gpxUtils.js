@@ -40,19 +40,34 @@ export function parseGpx(gpxText) {
     };
   });
 
-  // Compute elevation gain (only positive differences)
   let elevationGain = 0;
+  let elevationLoss = 0;
   for (let i = 1; i < points.length; i++) {
     const diff = points[i].ele - points[i - 1].ele;
     if (diff > 0) elevationGain += diff;
+    else elevationLoss += -diff;
   }
 
   return {
     name: track.name || 'Unnamed track',
     totalDistance: cumulativeDist,
     elevationGain,
+    elevationLoss,
     points,
   };
+}
+
+export function buildGpx(name, points) {
+  const escapedName = name
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<gpx version="1.1"><trk>',
+    `<name>${escapedName}</name>`,
+    '<trkseg>',
+    ...points.map((p) => `<trkpt lat="${p.lat}" lon="${p.lon}"><ele>${p.ele.toFixed(1)}</ele></trkpt>`),
+    '</trkseg></trk></gpx>',
+  ].join('\n');
 }
 
 export function reverseTrack(track) {
@@ -70,10 +85,12 @@ export function reverseTrack(track) {
   });
 
   let elevationGain = 0;
+  let elevationLoss = 0;
   for (let i = 1; i < points.length; i++) {
     const diff = points[i].ele - points[i - 1].ele;
     if (diff > 0) elevationGain += diff;
+    else elevationLoss += -diff;
   }
 
-  return { ...track, points, elevationGain };
+  return { ...track, points, elevationGain, elevationLoss };
 }
