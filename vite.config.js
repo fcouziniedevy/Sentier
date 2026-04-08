@@ -18,8 +18,8 @@ export default defineConfig({
         navigateFallback: 'index.html',
       },
       manifest: {
-        name: 'TrailApp',
-        short_name: 'TrailApp',
+        name: 'Sentier',
+        short_name: 'Sentier',
         description: 'Hiking GPS track viewer',
         start_url: '/',
         scope: '/',

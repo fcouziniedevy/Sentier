@@ -1,4 +1,4 @@
-const DB_NAME = 'trailapp';
+const DB_NAME = 'sentier';
 const STORE_NAME = 'tracks';
 const DB_VERSION = 1;
 

@@ -63,7 +63,7 @@ export default function App() {
     return (
       <div className="app">
         <header className="header">
-          <h1>TrailApp</h1>
+          <h1>Sentier</h1>
           <button className="header-btn" onClick={() => setPage('map')}>Map</button>
         </header>
         <div className="tabs">
@@ -91,7 +91,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="header map-header">
-        <h1>TrailApp</h1>
+        <h1>Sentier</h1>
         <div className="header-actions">
           {track && (
             <button className="header-btn" onClick={() => setShowChart((v) => !v)}>

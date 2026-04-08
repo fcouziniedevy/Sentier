@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What is TrailApp
+## What is Sentier
 
 A hiking GPS track viewer PWA built with React + Vite. Users upload GPX files, view tracks on a map with elevation charts, and can cache map tiles for offline use.
 
@@ -28,10 +28,10 @@ No test framework is configured.
 
 **Utilities** (`src/utils/`):
 - `gpxUtils.js` — GPX parsing (via `gpxparser` lib), haversine distance, elevation gain, track reversal.
-- `db.js` — IndexedDB wrapper for track storage (`trailapp` database, `tracks` store). Stores raw GPX text + metadata.
-- `tileCache.js` — IndexedDB tile cache (`trailapp-tiles` database). Computes required tiles for a track at zoom levels 12/14/16 with 2km buffer, batch downloads with rate limiting.
+- `db.js` — IndexedDB wrapper for track storage (`sentier` database, `tracks` store). Stores raw GPX text + metadata.
+- `tileCache.js` — IndexedDB tile cache (`sentier-tiles` database). Computes required tiles for a track at zoom levels 12/14/16 with 2km buffer, batch downloads with rate limiting.
 
-**Persistence** — two IndexedDB databases (`trailapp` for tracks, `trailapp-tiles` for map tiles) + `localStorage` for `lastTrackId` and `mapView` (center/zoom).
+**Persistence** — two IndexedDB databases (`sentier` for tracks, `sentier-tiles` for map tiles) + `localStorage` for `lastTrackId` and `mapView` (center/zoom).
 
 **PWA** — service worker (`public/sw.js`) with network-first caching strategy. Manifest at `public/manifest.json`.
 
