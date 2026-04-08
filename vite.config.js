@@ -4,6 +4,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  base: '/Sentier/',
   plugins: [
     react(),
     basicSsl(),
@@ -21,8 +22,8 @@ export default defineConfig({
         name: 'Sentier',
         short_name: 'Sentier',
         description: 'Hiking GPS track viewer',
-        start_url: '/',
-        scope: '/',
+        start_url: '/Sentier/',
+        scope: '/Sentier/',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#863bff',
