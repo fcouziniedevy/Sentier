@@ -1,16 +1,38 @@
-# React + Vite
+# Sentier
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Visualiseur de traces GPX pour la randonnée, conçu comme une PWA installable sur Android.
 
-Currently, two official plugins are available:
+## Fonctionnalités
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Carte** — affichage de la trace sur fond IGN Scan25, OpenTopoMap, IGN Plan ou OpenStreetMap
+- **Profil altimétrique** — graphique interactif avec zoom, synchronisé avec la carte (clic/survol)
+- **Localisation GPS** — position en temps réel avec indicateur de direction
+- **Mes traces** — import GPX, renommage, inversion, suppression
+- **Correction d'altitude** — enrichissement depuis l'API IGN RGE ALTI (remplace les altitudes GPS par des données LiDAR)
+- **Mise en cache hors-ligne** — téléchargement des tuiles IGN pour une utilisation sans réseau
+- **PWA** — installable sur Android via Chrome ("Ajouter à l'écran d'accueil")
 
-## React Compiler
+## Développement
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev      # serveur HTTPS local (certificat auto-signé)
+npm run build    # build de production
+npm run lint
+```
 
-## Expanding the ESLint configuration
+Le serveur de développement est exposé sur toutes les interfaces réseau (accessible depuis un téléphone sur le même réseau Wi-Fi).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Stack
+
+- React 19 + Vite 8
+- react-leaflet / Leaflet — carte
+- Chart.js — profil altimétrique
+- IndexedDB — stockage des traces et cache de tuiles
+- vite-plugin-pwa / Workbox — PWA et précache
+
+## Sources de données
+
+- **Tuiles cartographiques** : [IGN Géoplateforme](https://geoplateforme.ign.fr) (Scan25, Plan IGN), OpenTopoMap, OpenStreetMap
+- **Altimétrie** : IGN RGE ALTI via l'API Géoplateforme (limite : 5 req/s)
+- **Tuiles IGN** : clé publique `ign_scan_ws`, limite 10 req/s
