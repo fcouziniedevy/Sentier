@@ -10,7 +10,7 @@ Visualiseur de traces GPX pour la randonnée, conçu comme une PWA installable s
 - **Mes traces** — import GPX, renommage, inversion, suppression
 - **Correction d'altitude** — enrichissement depuis l'API IGN RGE ALTI (remplace les altitudes GPS par des données LiDAR)
 - **Mise en cache hors-ligne** — téléchargement des tuiles IGN pour une utilisation sans réseau
-- **PWA** — installable sur Android via Chrome ("Ajouter à l'écran d'accueil")
+- **PWA** — installable sur Android via Chrome/Firefox ("Ajouter à l'écran d'accueil")
 
 ## Développement
 
@@ -33,6 +33,5 @@ Le serveur de développement est exposé sur toutes les interfaces réseau (acce
 
 ## Sources de données
 
-- **Tuiles cartographiques** : [IGN Géoplateforme](https://geoplateforme.ign.fr) (Scan25, Plan IGN), OpenTopoMap, OpenStreetMap
+- **Tuiles cartographiques** : [IGN Géoplateforme](https://geoplateforme.ign.fr), OpenTopoMap, OpenStreetMap
 - **Altimétrie** : IGN RGE ALTI via l'API Géoplateforme (limite : 5 req/s)
-- **Tuiles IGN** : clé publique `ign_scan_ws`, limite 10 req/s
